@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for creating a NodeJS lambda function and API Gateway
+
+Parameters:
+  APIKeySecretValueParameter:
+    Type: String
+    Default: '{"API_KEY":"${API_KEY}"}'
+    Description: Value for the API key secret.
+
+  AppIDSecretParameter:
+    Type: String
+    Default: '{"GITHUB_APP_ID":"${GITHUB_APP_ID}"}'
+    Description: Value for the app id secret.
+
+  ClientIDSecretParameter:
+    Type: String
+    Default: '{"GITHUB_CLIENT_ID":"${GITHUB_CLIENT_ID}"}'
+    Description: Value for the client id secret.
+
+  ClientSecretSecretParameter:
+    Type: String
+    Default: '{"GITHUB_CLIENT_SECRET":"${GITHUB_CLIENT_SECRET}"}'
+    Description: Value for the client secret.
+
+  InstallationIDSecretParameter:
+    Type: String
+    Default: '{"GITHUB_INSTALLATION_ID":"${GITHUB_INSTALLATION_ID}"}'
+    Description: Value for the installation id secret.
+
+  PrivateKeySecretParameter:
+    Type: String
+    Default: '{"GITHUB_PK":"${GITHUB_PK}"}'
+    Description: Value for the Github private key secret.
+
+  WebhookLambdaNameParameter:
+    Type: String
+    Default: GitHubWebhookLambdaFunction
+    Description: Value for the Github webhook lambda name.
+
+  GitHubOrgNameParameter:
+    Type: String
+    Default: org
+    Description: Value for the Github webhook lambda name.
+
+  WebhookLambdaCodeBucketParameter:
+    Type: String
+    Default: summaraize-lambda-code
+    Description: Value for the S3 bucket name where the lambda code is stored.
+
+  GitHubWebhookApiNameParameter:
+    Type: String
+    Default: GitHubWebhookApi
+    Description: Value for the Github webhook API name.
+
+  GitHubWebhookApiStageNameParameter:
+    Type: String
+    Default: summaraize
+    Description: Value for the Github webhook API stage name.
+
+Resources:
+  APIKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: summaraize/github/webhooks/api-key
+      Description: Secret for API Key
+      SecretString: !Ref APIKeySecretValueParameter
+
+  AppIDSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: summaraize/github/webhooks/app-id
+      Description: Secret for GitHub App ID
+      SecretString: !Ref AppIDSecretParameter
+
+  ClientIDSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: summaraize/github/webhooks/client-id
+      Description: Secret for GitHub Client ID
+      SecretString: !Ref ClientIDSecretParameter
+
+  ClientSecretSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: summaraize/github/webhooks/client-secret
+      Description: Secret for GitHub Client Secret
+      SecretString: !Ref ClientSecretSecretParameter
+
+  InstallationIDSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: summaraize/github/webhooks/installation-id
+      Description: Secret for GitHub Installation ID
+      SecretString: !Ref InstallationIDSecretParameter
+
+  PrivateKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: summaraize/github/webhooks/private-key
+      Description: Secret for GitHub Private Key
+      SecretString: !Ref PrivateKeySecretParameter
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSecretsManagerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:GetRandomPassword
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:ListSecretVersionIds
+                  - secretsmanager:ListSecrets
+                  - secretsmanager:BatchGetSecretValue
+                Resource: '*'
+        - PolicyName: BedrockPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:*
+                Resource: '*'
+        - PolicyName: LambdaLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
+  GitHubWebhookLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref WebhookLambdaNameParameter
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref WebhookLambdaCodeBucketParameter
+        S3Key: function.zip
+      Runtime: nodejs20.x
+      Timeout: 120
+      Environment:
+        Variables:
+          API_KEY: summaraize/github/webhooks/api-key
+          GITHUB_APP_ID: summaraize/github/webhooks/app-id
+          GITHUB_CLIENT_ID: summaraize/github/webhooks/client-id
+          GITHUB_CLIENT_SECRET: summaraize/github/webhooks/client-secret
+          GITHUB_INSTALLATION_ID: summaraize/github/webhooks/installation-id
+          GITHUB_PK: summaraize/github/webhooks/private-key
+          MAX_TOKENS_TO_SAMPLE: '300'
+          ORG_NAME: !Ref GitHubOrgNameParameter
+          PROMPT: "\\n\\nHuman: Given the git patch file:\\n==========\\n{diff}\\n==========\\n\\nsummarize in 3-4 sentences the logical changes which the pull request will apply in the project. Write the response in a style which will be used for a pull request comment. Do not use the words 'diff' or 'patch' in the response, instead use 'PR'. Use simple, clear and concise sentences which can be understood even by not so tech-savvy people. Extract information not only from the patch description, but also from the actual changes in the pull request. I am aware that you do not have access to the whole source code, so do not mention it. Refrain from using bullets and listing each added, deleted or modified class or method. Avoid describing method parameters. Focus on what the new methods do from business perspective, not on their parameters and names - e.g. 'a user deletion method was added, as well as a new method for validating user input'. Avoid looking in external dependencies. If the change includes code formatting, do not categorize it as a new functionality. Start your response directly with the summary. If you have to make assumptions, make them.\\n\\nAssistant:"
+          REGION: !Ref "AWS::Region"
+          TEMPERATURE: '0.2'
+          TOP_K: '250'
+          TOP_P: '0.999'
+
+  GitHubWebhookApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Ref GitHubWebhookApiNameParameter
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      BinaryMediaTypes:
+        - 'text/plain'
+        - 'application/octet-stream'
+        - 'multipart/form-data'
+
+  GitHubWebhookApiGatewayApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GitHubWebhookApiGateway
+      ParentId: !GetAtt GitHubWebhookApiGateway.RootResourceId
+      PathPart: 'api'
+
+  GitHubWebhookApiGatewayWebhookResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GitHubWebhookApiGateway
+      ParentId: !Ref GitHubWebhookApiGatewayApiResource
+      PathPart: 'webhook'
+
+  GitHubWebhookApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref GitHubWebhookApiGatewayWebhookResource
+      RestApiId: !Ref GitHubWebhookApiGateway
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GitHubWebhookLambdaFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+          ResponseModels:
+            application/json: "Empty"
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt GitHubWebhookLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GitHubWebhookApiGateway}/*/*"
+
+  GitHubWebhookApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: GitHubWebhookApiGatewayMethod
+    Properties:
+      RestApiId: !Ref GitHubWebhookApiGateway
+
+  SummarizeStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref GitHubWebhookApiStageNameParameter
+      RestApiId: !Ref GitHubWebhookApiGateway
+      DeploymentId: !Ref GitHubWebhookApiGatewayDeployment

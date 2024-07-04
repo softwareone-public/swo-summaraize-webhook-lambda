@@ -1,0 +1,26 @@
+{
+  "author": "",
+  "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.540.0",
+    "@aws-sdk/client-secrets-manager": "^3.540.0",
+    "@octokit/auth-app": "6.0.4",
+    "@octokit/rest": "20.0.2",
+    "@types/node": "^20.11.30",
+    "prettier": "3.2.5",
+    "typescript": "^5.4.3"
+  },
+  "description": "",
+  "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.540.0",
+    "@types/aws-lambda": "^8.10.136",
+    "prettier": "^3.2.5"
+  },
+  "scripts": {
+    "format": "prettier --write ."
+  },
+  "keywords": [],
+  "license": "ISC",
+  "main": "index.js",
+  "name": "summaraize-webhook-lambda",
+  "version": "1.0.0"
+}
