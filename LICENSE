@@ -1,5 +1,15 @@
-SummarAIze is software developed by SoftwareONE AG for automatic generation of GitHub pull request descriptions driven by AI. The SummarAIze software code, including source files and code samples if any in the content, is provided without support and with no expectation of receiving feedback from or inviting further collaboration with users.
+SummarAIze is software developed by SoftwareONE AG for automatic generation
+of GitHub pull request descriptions driven by AI. The SummarAIze software
+code, including source files and code samples if any in the content, is
+provided without support and with no expectation of receiving feedback from
+or inviting further collaboration with users.
 
 Copyright © 2024 SoftwareOne
 
-SummarAIze is licensed under the Apache License, Version 2.0 (“License”). You may not use this file except in compliance with the License, which copy can be obtained at: [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0). Unless required by applicable law or agreed to in writing, SummarAlze distributed under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESSED OR IMPLIED. See the License for the specific language governing permissions and limitations under the License.
+SummarAIze is licensed under the Apache License, Version 2.0 (“License”).
+You may not use this file except in compliance with the License, which copy
+can be obtained at: http://www.apache.org/licenses/LICENSE-2.0. Unless
+required by applicable law or agreed to in writing, SummarAlze distributed
+under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, EITHER EXPRESSED OR IMPLIED. See the License for the
+specific language governing permissions and limitations under the License.
